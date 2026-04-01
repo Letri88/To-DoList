@@ -1,0 +1,282 @@
+@model IEnumerable<To_doList.Models.TodoTask>
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<To_doList.Models.AppUserModel> UserManager
+
+@{
+    ViewData["Title"] = "Kanban Board";
+    var currentUserId = UserManager.GetUserId(User);
+    var pendingTasks = Model.Where(t => !t.IsCompleted).ToList();
+    var completedTasks = Model.Where(t => t.IsCompleted).ToList();
+}
+
+<style>
+    .kanban-board {
+        display: flex;
+        gap: 2rem;
+        overflow-x: auto;
+        padding-bottom: 2rem;
+        height: calc(100vh - 200px);
+    }
+
+    .kanban-column {
+        flex: 1;
+        min-width: 300px;
+        background: #f8fafc;
+        border-radius: 1rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color);
+        height: 100%;
+    }
+
+    .kanban-column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid transparent;
+    }
+
+    .kanban-header-pending { border-bottom-color: #6366f1; }
+    .kanban-header-done { border-bottom-color: #22c55e; }
+
+    .kanban-tasks {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .kanban-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        cursor: grab;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .kanban-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .kanban-card:active {
+        cursor: grabbing;
+    }
+
+    .kanban-card h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .kanban-card p {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .kanban-card-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .priority-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+
+    .drag-over {
+        background: #e2e8f0;
+        border: 2px dashed #94a3b8;
+    }
+</style>
+
+<div class="d-flex justify-between align-center mb-4">
+    <div>
+        <h1>Kanban Board</h1>
+        <p class="text-muted">Drag and drop tasks to manage progress</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        + New Task
+    </a>
+</div>
+
+<div class="kanban-board">
+    <!-- Pending Column -->
+    <div class="kanban-column" id="pending-column" ondrop="drop(event, false)" ondragover="allowDrop(event)">
+        <div class="kanban-column-header kanban-header-pending">
+            <h3>To Do</h3>
+            <span class="badge bg-secondary">@pendingTasks.Count</span>
+        </div>
+        <div class="kanban-tasks" id="pending-tasks">
+            @foreach (var task in pendingTasks)
+            {
+                <div class="kanban-card" draggable="true" ondragstart="drag(event)" id="task-@task.TaskId" data-id="@task.TaskId">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; justify-content: space-between;">
+                        <div style="display: flex; align-items: center;">
+                             <span class="priority-indicator" style="background-color: @(task.Priority == 1 ? "#ef4444" : task.Priority == 2 ? "#eab308" : "#22c55e")"></span>
+                            <h4>@task.Title</h4>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            @if (task.UserId != currentUserId)
+                            {
+                                <span title="Assigned by @task.User?.UserName" style="color: var(--text-secondary); font-size: 0.8rem; display: flex; align-items: center;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                </span>
+                            }
+                            else if (task.Assignments != null && task.Assignments.Any())
+                            {
+                                <span title="Shared" style="color: var(--text-secondary); font-size: 0.8rem; display: flex; align-items: center;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                </span>
+                            }
+                            <a asp-action="Edit" asp-route-id="@task.TaskId" style="color: var(--text-secondary); text-decoration: none;" title="Edit Task">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                    <p>@task.Description</p>
+                    <div class="kanban-card-meta">
+                        <span>@task.DueDate?.ToString("MMM dd")</span>
+                        <div class="d-flex gap-1">
+                            @foreach(var tag in task.TaskTags) {
+                                <span class="badge" style="background: @(tag.Tag?.Color ?? "#eee"); color: #333; font-size: 0.6rem;">
+                                    @(tag.Tag?.TagName)
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Done Column -->
+    <div class="kanban-column" id="done-column" ondrop="drop(event, true)" ondragover="allowDrop(event)">
+        <div class="kanban-column-header kanban-header-done">
+            <h3>Done</h3>
+            <span class="badge bg-secondary">@completedTasks.Count</span>
+        </div>
+        <div class="kanban-tasks" id="done-tasks">
+            @foreach (var task in completedTasks)
+            {
+                <div class="kanban-card" draggable="true" ondragstart="drag(event)" id="task-@task.TaskId" data-id="@task.TaskId" style="opacity: 0.7;">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; justify-content: space-between;">
+                        <div style="display: flex; align-items: center;">
+                             <span class="priority-indicator" style="background-color: @(task.Priority == 1 ? "#ef4444" : task.Priority == 2 ? "#eab308" : "#22c55e")"></span>
+                            <h4 style="text-decoration: line-through;">@task.Title</h4>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            @if (task.UserId != currentUserId)
+                            {
+                                <span title="Assigned by @task.User?.UserName" style="color: var(--text-secondary); font-size: 0.8rem; display: flex; align-items: center;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                </span>
+                            }
+                            else if (task.Assignments != null && task.Assignments.Any())
+                            {
+                                <span title="Shared" style="color: var(--text-secondary); font-size: 0.8rem; display: flex; align-items: center;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                </span>
+                            }
+                            <a asp-action="Edit" asp-route-id="@task.TaskId" style="color: var(--text-secondary); text-decoration: none;" title="Edit Task">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                    <p>@task.Description</p>
+                    <div class="kanban-card-meta">
+                        <span>@task.DueDate?.ToString("MMM dd")</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+            ev.dataTransfer.setData("taskId", ev.target.dataset.id);
+        }
+
+        function drop(ev, isCompleted) {
+            ev.preventDefault();
+            // Remove drop highlight
+            document.querySelectorAll('.kanban-column').forEach(col => col.classList.remove('drag-over'));
+
+            var data = ev.dataTransfer.getData("text");
+            var taskId = ev.dataTransfer.getData("taskId");
+            var draggedElement = document.getElementById(data);
+            
+            // Find the closest task list container (to avoid dropping on header)
+            var targetColumn = ev.currentTarget.querySelector('.kanban-tasks');
+            
+            // Move item visually
+            if(targetColumn) {
+                targetColumn.appendChild(draggedElement);
+                
+                // Update visual styles (strike-through, opacity)
+                var title = draggedElement.querySelector('h4');
+                if(isCompleted) {
+                    draggedElement.style.opacity = '0.7';
+                    title.style.textDecoration = 'line-through';
+                } else {
+                    draggedElement.style.opacity = '1';
+                    title.style.textDecoration = 'none';
+                }
+
+                // Call API to update status
+                updateTaskStatus(taskId, isCompleted);
+            }
+        }
+
+        // Remove drag-over style when leaving
+        document.querySelectorAll('.kanban-column').forEach(col => {
+            col.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+        });
+
+        function updateTaskStatus(taskId, isCompleted) {
+            fetch('/Tasks/UpdateStatus/' + taskId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add Anti-Forgery Token if needed - simplified here for brevity, 
+                    // but in production should send RequestVerificationToken
+                },
+                body: JSON.stringify({ isCompleted: isCompleted })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    alert('Error updating task status');
+                    // Revert move if failed (omitted for simplicity)
+                }
+            });
+        }
+    </script>
+}

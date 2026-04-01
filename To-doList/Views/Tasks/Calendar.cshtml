@@ -1,0 +1,55 @@
+@{
+    ViewData["Title"] = "Calendar";
+}
+
+<div class="d-flex justify-between align-center mb-4">
+    <div>
+        <h1>Calendar</h1>
+        <p class="text-muted">View your tasks by due date</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        + New Task
+    </a>
+</div>
+
+<div class="card" style="padding: 1.5rem; background: white; min-height: 800px;">
+    <div id='calendar'></div>
+</div>
+
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+
+@section Scripts {
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: '/Tasks/GetTasksForCalendar', // Fetch events from our API
+                eventClick: function(info) {
+                    if (info.event.url) {
+                         // Default behavior is to visit the URL in the same tab
+                         // We can also open in modal if we want (future improvement)
+                    }
+                },
+                // Optional: Customize event rendering
+                eventDidMount: function(info) {
+                    // Tooltip with description?
+                    if(info.event.extendedProps.description) {
+                        info.el.title = info.event.extendedProps.description; 
+                    }
+                },
+                height: 'auto',
+                contentHeight: 700 
+            });
+            calendar.render();
+        });
+    </script>
+}

@@ -1,0 +1,473 @@
+@model To_doList.Models.TodoTask
+
+@{
+    ViewData["Title"] = "Edit Task";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<To_doList.Models.AppUserModel> UserManager
+<div class="container animate-fade-in" style="max-width: 1000px; display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-start;">
+    <div style="flex: 1; min-width: 350px;">
+        <div class="mb-4">
+             <a asp-action="Index" class="btn btn-secondary" style="margin-bottom: 1rem;">&larr; Back to List</a>
+            <h1>Edit Task</h1>
+        </div>
+
+        <div class="card">
+            <form asp-action="Edit" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="TaskId" />
+            <input type="hidden" asp-for="UserId" />
+            <input type="hidden" asp-for="CreatedAt" />
+
+            <div class="form-group">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+             <div class="d-flex gap-2 mb-4 flex-wrap">
+                <div class="form-group" style="flex: 1; min-width: 120px;">
+                    <label asp-for="Priority" class="form-label"></label>
+                    <select asp-for="Priority" class="form-control">
+                        <option value="1">High</option>
+                        <option value="2">Medium</option>
+                        <option value="3">Low</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px;">
+                    <label asp-for="StartDate" class="form-label">Start Date</label>
+                     <input asp-for="StartDate" type="date" class="form-control" />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px;">
+                    <label asp-for="DueDate" class="form-label">Due Date</label>
+                     <input asp-for="DueDate" type="date" class="form-control" />
+                    <span asp-validation-for="DueDate" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label">Tags</label>
+                <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                    @{
+                        var selectedTags = ViewData["SelectedTags"] as List<int> ?? new List<int>();
+                    }
+                    @if (ViewData["Tags"] is List<To_doList.Models.Tag> tags && tags.Any())
+                    {
+                        @foreach (var tag in tags)
+                        {
+                            var isChecked = selectedTags.Contains(tag.TagId) ? "checked" : "";
+                            <label class="custom-checkbox badge" style="background-color: @tag.Color; color: #1e293b; padding: 0.5rem 1rem; border-radius: 2rem; cursor: pointer; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="checkbox" name="selectedTags" value="@tag.TagId" style="margin-right: 0.5rem;" @isChecked />
+                                @tag.TagName
+                            </label>
+                        }
+                    }
+                     else
+                    {
+                         <span class="text-muted">No tags available. <a asp-controller="Tags" asp-action="Create">Create one</a></span>
+                    }
+                </div>
+            </div>
+
+            <!-- Attachments Section -->
+            <div class="form-group mb-4">
+                <label class="form-label">Attachments</label>
+                
+                <!-- List existing files -->
+                @if (Model.Attachments != null && Model.Attachments.Any())
+                {
+                    <div class="mb-3">
+                        <ul class="list-group">
+                            @foreach (var file in Model.Attachments)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center attachment-item" data-id="@file.Id">
+                                    <a href="@file.FilePath" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-file-earmark"></i> @file.FileName
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-attachment" title="Remove">
+                                        &times;
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Upload new files -->
+                <input type="file" name="files" multiple class="form-control" />
+                <small class="text-muted">Allowed: jpg, png, pdf, doc, xls, txt, csv (Max 5MB)</small>
+            </div>
+
+            <!-- Subtasks Section -->
+            <div class="form-group mb-4">
+                <label class="form-label">Subtasks</label>
+                <div id="subtasks-list" class="mb-3">
+                    @foreach (var subTask in Model.SubTasks)
+                    {
+                        <div class="d-flex align-items-center mb-2 subtask-item" data-id="@subTask.SubTaskId" style="gap: 10px; background: var(--bg-card, #f8fafc); padding: 8px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0);">
+                            <input type="checkbox" class="form-check-input subtask-check" @(subTask.IsCompleted ? "checked" : "") style="width: 20px; height: 20px;" />
+                            <div class="flex-grow-1">
+                                <span class="@(subTask.IsCompleted ? "text-decoration-line-through text-muted" : "") subtask-title" style="display:block;">@subTask.Title</span>
+                                @if (subTask.StartDate.HasValue || subTask.DueDate.HasValue)
+                                {
+                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                        @(subTask.StartDate?.ToString("MMM dd") ?? "...") - @(subTask.DueDate?.ToString("MMM dd") ?? "...")
+                                    </small>
+                                }
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger subtask-delete" style="padding: 0.25rem 0.5rem;">&times;</button>
+                        </div>
+                    }
+                </div>
+                <div class="p-3" style="background: var(--surface); border: 1px dashed var(--border-color); border-radius: 8px;">
+                     <div class="mb-2">
+                         <input type="text" id="new-subtask-title" class="form-control" style="width: 100%; box-sizing: border-box;" placeholder="Add a subtask title..." />
+                     </div>
+                     <div class="d-flex gap-2 align-items-center flex-wrap" style="margin-top: 5px; margin-bottom: 15px;">
+                         <span style="font-size:0.85rem; white-space: nowrap;" class="text-muted">Start:</span>
+                         <input type="date" id="new-subtask-start" class="form-control form-control-sm" style="flex: 1; min-width: 120px;" />
+                         <span style="font-size:0.85rem; white-space: nowrap;" class="text-muted">Due:</span>
+                         <input type="date" id="new-subtask-due" class="form-control form-control-sm" style="flex: 1; min-width: 120px;" />
+                     </div>
+                     <button type="button" id="add-subtask-btn" class="btn btn-primary text-center" style="width: 100%;">Thêm Subtask</button>
+                </div>
+            </div>
+
+             <div class="form-group">
+                <label class="custom-checkbox">
+                    <input class="form-check-input" asp-for="IsCompleted" /> 
+                    <span>Mark as Completed</span>
+                </label>
+            </div>
+             <div class="form-group">
+                <label class="custom-checkbox">
+                    <input class="form-check-input" asp-for="IsDeleted" /> 
+                    <span>Move to Trash</span>
+                </label>
+            </div>
+
+            <div class="d-flex justify-between align-center" style="margin-top: 2rem;">
+                 <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
+            </div>
+        </form>
+    </div>
+    </div> <!-- End Left Column -->
+
+    <!-- Right Column: Collaboration -->
+    <div style="flex: 1; min-width: 300px;">
+        <div class="mb-4">
+            <h2>Collaboration</h2>
+            <p class="text-muted">Work together with your team</p>
+        </div>
+
+        <div class="card mb-4" style="background: var(--surface);">
+            <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">Assignees</h3>
+            <div id="assignees-list" class="d-flex gap-2" style="flex-wrap: wrap; margin-bottom: 1rem;">
+                @{
+                    var currentUserId = UserManager.GetUserId(User);
+                }
+                <!-- Owner Badge -->
+                <span class="badge" style="background: var(--primary-color); color: white; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                    Owner: @(Model.User?.UserName ?? "You")
+                </span>
+                
+                @foreach (var assignment in Model.Assignments)
+                {
+                    <span class="badge assignee-badge" style="background: var(--border-color); color: var(--text-primary); display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.4rem 0.8rem;" data-id="@assignment.UserId">
+                        @assignment.User?.UserName
+                        @if (Model.UserId == currentUserId)
+                        {
+                            <button type="button" class="remove-assignee-btn" style="background: none; border: none; padding: 0; cursor: pointer; color: var(--danger); font-weight: bold;">&times;</button>
+                        }
+                    </span>
+                }
+            </div>
+
+            @if (Model.UserId == currentUserId)
+            {
+                <div style="position: relative;">
+                    <div class="d-flex gap-2">
+                        <input type="text" id="search-user-input" class="form-control" placeholder="Search by username or email..." autocomplete="off" />
+                        <button type="button" id="search-user-btn" class="btn btn-secondary">Search</button>
+                    </div>
+                    <!-- Dropdown Results -->
+                    <div id="search-results" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 10; display: none; max-height: 200px; overflow-y: auto;">
+                        <ul style="list-style: none; padding: 0; margin: 0;" id="search-results-list">
+                            <!-- Results will be injected here -->
+                        </ul>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="card" style="background: var(--surface); display: flex; flex-direction: column;">
+            <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">Comments</h3>
+            <div id="comments-list" style="flex: 1; min-height: 200px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; padding-right: 0.5rem;">
+                @foreach (var comment in Model.Comments.OrderBy(c => c.CreatedAt))
+                {
+                    var isMine = comment.UserId == currentUserId;
+                    <div style="display: flex; flex-direction: column; align-items: @(isMine ? "flex-end" : "flex-start");">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.2rem;">@comment.User?.UserName - @comment.CreatedAt.ToString("g")</span>
+                        <div style="background: @(isMine ? "var(--primary-color)" : "var(--border-color)"); color: @(isMine ? "white" : "var(--text-primary)"); padding: 0.75rem 1rem; border-radius: 1rem; max-width: 85%; line-height: 1.4;">
+                            @comment.Content
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="d-flex gap-2" style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <input type="text" id="new-comment-input" class="form-control" placeholder="Write a comment..." />
+                <button type="button" id="send-comment-btn" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><path d="M22 2L15 22L11 13L2 9L22 2Z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div> <!-- End Right Column -->
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskId = @Model.TaskId;
+            const currentUserId = '@UserManager.GetUserId(User)';
+            const list = document.getElementById('subtasks-list');
+            const input = document.getElementById('new-subtask-title');
+            const addBtn = document.getElementById('add-subtask-btn');
+
+            // Add Subtask
+            async function addSubTask() {
+                const title = input.value.trim();
+                const startDate = document.getElementById('new-subtask-start').value;
+                const dueDate = document.getElementById('new-subtask-due').value;
+                if (!title) return;
+
+                const formData = new FormData();
+                formData.append('taskId', taskId);
+                formData.append('title', title);
+                if(startDate) formData.append('startDate', startDate);
+                if(dueDate) formData.append('dueDate', dueDate);
+
+                try {
+                    const res = await fetch('/Tasks/AddSubTask', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if(res.ok) {
+                        const data = await res.json();
+                        let dateHtml = '';
+                        if(data.startDate || data.dueDate) {
+                            let sd = data.startDate ? new Date(data.startDate).toLocaleDateString([], {month:'short', day:'numeric'}) : '...';
+                            let dd = data.dueDate ? new Date(data.dueDate).toLocaleDateString([], {month:'short', day:'numeric'}) : '...';
+                            dateHtml = `<small class="text-muted" style="font-size: 0.75rem;">${sd} - ${dd}</small>`;
+                        }
+
+                        const div = document.createElement('div');
+                        div.className = 'd-flex align-items-center mb-2 subtask-item';
+                        div.style.cssText = 'gap: 10px; background: var(--bg-card, #f8fafc); padding: 8px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0);';
+                        div.dataset.id = data.subTaskId;
+                        div.innerHTML = `
+                            <input type="checkbox" class="form-check-input subtask-check" style="width: 20px; height: 20px;" />
+                            <div class="flex-grow-1">
+                                <span class="subtask-title" style="display:block;">${data.title}</span>
+                                ${dateHtml}
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger subtask-delete" style="padding: 0.25rem 0.5rem;">&times;</button>
+                        `;
+                        list.appendChild(div);
+                        input.value = '';
+                        document.getElementById('new-subtask-start').value = '';
+                        document.getElementById('new-subtask-due').value = '';
+                    } else {
+                        const errorMsg = await res.text();
+                        alert(errorMsg || "Có lỗi xảy ra khi thêm Subtask.");
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            addBtn.addEventListener('click', addSubTask);
+            input.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); addSubTask(); }});
+
+            // Toggle & Delete
+            list.addEventListener('click', async function(e) {
+                const item = e.target.closest('.subtask-item');
+                if(!item) return;
+                const id = item.dataset.id;
+                
+                if (e.target.classList.contains('subtask-check')) {
+                    // Toggle
+                     const formData = new FormData();
+                     formData.append('subTaskId', id);
+                     const res = await fetch(`/Tasks/ToggleSubTask`, { method: 'POST', body: formData });
+                     if(res.ok) {
+                         const data = await res.json();
+                         const span = item.querySelector('.subtask-title');
+                         if(data.isCompleted) {
+                             span.classList.add('text-decoration-line-through', 'text-muted');
+                         } else {
+                             span.classList.remove('text-decoration-line-through', 'text-muted');
+                         }
+                     } else {
+                         e.target.checked = !e.target.checked; // Revert
+                     }
+                } else if (e.target.classList.contains('subtask-delete')) {
+                    // Delete
+                    if(!confirm('Delete subtask?')) return;
+                    const formData = new FormData();
+                    formData.append('subTaskId', id);
+                    const res = await fetch(`/Tasks/DeleteSubTask`, { method: 'POST', body: formData });
+                    if(res.ok) {
+                        item.remove();
+                    }
+                }
+            });
+
+            // Delete Attachment
+            document.querySelectorAll('.delete-attachment').forEach(btn => {
+                btn.addEventListener('click', async function(e) {
+                    if(!confirm('Delete attachment?')) return;
+                    const item = e.target.closest('.attachment-item');
+                    const id = item.dataset.id;
+                    
+                    try {
+                         const formData = new FormData();
+                         formData.append('id', id);
+                         const res = await fetch('/Tasks/DeleteAttachment', { method: 'POST', body: formData });
+                         if(res.ok) {
+                             item.remove();
+                         } else {
+                             alert('Failed to delete attachment.');
+                         }
+                    } catch (e) { console.error(e); }
+                });
+            });
+
+            // Collaboration: Search Users
+            const searchInput = document.getElementById('search-user-input');
+            const searchBtn = document.getElementById('search-user-btn');
+            const searchResults = document.getElementById('search-results');
+            const searchList = document.getElementById('search-results-list');
+
+            if (searchBtn) {
+                searchBtn.addEventListener('click', async () => {
+                    const q = searchInput.value.trim();
+                    if (!q) return;
+                    try {
+                        const res = await fetch(`/Tasks/SearchUsers?query=${encodeURIComponent(q)}`);
+                        if (res.ok) {
+                            const users = await res.json();
+                            searchList.innerHTML = '';
+                            if (users.length === 0) {
+                                searchList.innerHTML = '<li style="padding: 0.75rem; color: var(--text-secondary);">No users found.</li>';
+                            } else {
+                                users.forEach(u => {
+                                    const li = document.createElement('li');
+                                    li.style.cssText = 'padding: 0.75rem; border-bottom: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem;';
+                                    li.innerHTML = `<strong>${u.userName}</strong> <span style="font-size:0.8rem;color:var(--text-secondary)">(${u.email || ''})</span>`;
+                                    li.addEventListener('click', () => addAssignee(u.id, u.userName));
+                                    searchList.appendChild(li);
+                                });
+                            }
+                            searchResults.style.display = 'block';
+                        }
+                    } catch(e) { console.error(e); }
+                });
+                
+                // Hide search when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target) && !searchBtn.contains(e.target)) {
+                        searchResults.style.display = 'none';
+                    }
+                });
+            }
+
+            async function addAssignee(userId, userName) {
+                const formData = new FormData();
+                formData.append('taskId', taskId);
+                formData.append('assigneeId', userId);
+                try {
+                    const res = await fetch('/Tasks/AddAssignee', { method: 'POST', body: formData });
+                    if (res.ok) {
+                        location.reload(); // Quickest way to reflect changes
+                    }
+                } catch(e) { console.error(e); }
+            }
+
+            // Remove Assignee
+            document.querySelectorAll('.remove-assignee-btn').forEach(btn => {
+                btn.addEventListener('click', async function(e) {
+                    if(!confirm('Remove this assignee?')) return;
+                    const badge = e.target.closest('.assignee-badge');
+                    const userId = badge.dataset.id;
+                    const formData = new FormData();
+                    formData.append('taskId', taskId);
+                    formData.append('assigneeId', userId);
+                    try {
+                        const res = await fetch('/Tasks/RemoveAssignee', { method: 'POST', body: formData });
+                        if(res.ok) badge.remove();
+                    } catch(e) { console.error(e); }
+                });
+            });
+
+            // Comments
+            const commentInput = document.getElementById('new-comment-input');
+            const commentBtn = document.getElementById('send-comment-btn');
+            const commentList = document.getElementById('comments-list');
+
+            // SignalR Setup
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/taskHub")
+                .build();
+
+            connection.on("ReceiveComment", function (data) {
+                const isMine = data.userId === currentUserId;
+                const div = document.createElement('div');
+                div.style.cssText = `display: flex; flex-direction: column; align-items: ${isMine ? 'flex-end' : 'flex-start'};`;
+                div.innerHTML = `
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.2rem;">${data.userName} - ${data.createdAt}</span>
+                    <div style="background: ${isMine ? 'var(--primary-color)' : 'var(--border-color)'}; color: ${isMine ? 'white' : 'var(--text-primary)'}; padding: 0.75rem 1rem; border-radius: 1rem; max-width: 85%; line-height: 1.4;">
+                        ${data.content}
+                    </div>
+                `;
+                commentList.appendChild(div);
+                commentList.scrollTop = commentList.scrollHeight;
+            });
+
+            connection.start().then(function () {
+                connection.invoke("JoinTaskRoom", taskId).catch(function (err) {
+                    console.error(err.toString());
+                });
+            }).catch(function (err) {
+                console.error(err.toString());
+            });
+
+            async function addComment() {
+                const content = commentInput.value.trim();
+                if (!content) return;
+                const formData = new FormData();
+                formData.append('taskId', taskId);
+                formData.append('content', content);
+                try {
+                    const res = await fetch('/Tasks/AddComment', { method: 'POST', body: formData });
+                    if(res.ok) {
+                        commentInput.value = '';
+                    }
+                } catch(e) { console.error(e); }
+            }
+            
+            commentBtn.addEventListener('click', addComment);
+            commentInput.addEventListener('keypress', e => { if (e.key === 'Enter') addComment(); });
+            
+            // Scroll comments to bottom initially
+            if(commentList) commentList.scrollTop = commentList.scrollHeight;
+        });
+    </script>
+}

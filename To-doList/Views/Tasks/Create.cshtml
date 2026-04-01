@@ -1,0 +1,85 @@
+@model To_doList.Models.TodoTask
+
+@{
+    ViewData["Title"] = "Create Task";
+}
+
+<div class="container animate-fade-in" style="max-width: 600px;">
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-secondary" style="margin-bottom: 1rem;">&larr; Back to List</a>
+        <h1>Create New Task</h1>
+        <p class="text-muted">Fill in the details below to add a new task.</p>
+    </div>
+
+    <div class="card">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" placeholder="What needs to be done?" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="4" placeholder="Add more details..."></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2 mb-4 flex-wrap">
+                <div class="form-group" style="flex: 1; min-width: 120px;">
+                    <label asp-for="Priority" class="form-label"></label>
+                    <select asp-for="Priority" class="form-control">
+                        <option value="1">High</option>
+                        <option value="2" selected>Medium</option>
+                        <option value="3">Low</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px;">
+                    <label asp-for="StartDate" class="form-label">Start Date</label>
+                    <input asp-for="StartDate" type="date" class="form-control" />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px;">
+                    <label asp-for="DueDate" class="form-label">Due Date</label>
+                    <input asp-for="DueDate" type="date" class="form-control" />
+                    <span asp-validation-for="DueDate" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Attachments</label>
+                <input type="file" name="files" multiple class="form-control" />
+                <small class="text-muted">Allowed: jpg, png, pdf, doc, xls, txt, csv (Max 5MB)</small>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label">Tags</label>
+                <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                    @if (ViewData["Tags"] is List<To_doList.Models.Tag> tags && tags.Any())
+                    {
+                        @foreach (var tag in tags)
+                        {
+                            <label class="custom-checkbox badge" style="background-color: @tag.Color; color: #1e293b; padding: 0.5rem 1rem; border-radius: 2rem; cursor: pointer; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="checkbox" name="selectedTags" value="@tag.TagId" style="margin-right: 0.5rem;" />
+                                @tag.TagName
+                            </label>
+                        }
+                    }
+                    else
+                    {
+                         <span class="text-muted">No tags available. <a asp-controller="Tags" asp-action="Create">Create one</a></span>
+                    }
+                </div>
+            </div>
+
+            <div class="d-flex justify-between align-center" style="margin-top: 2rem;">
+                 <button type="submit" class="btn btn-primary" style="width: 100%;">Create Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

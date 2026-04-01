@@ -1,0 +1,24 @@
+@using Microsoft.AspNetCore.Identity
+@using To_doList.Models
+@inject SignInManager<AppUserModel> SignInManager
+@inject UserManager<AppUserModel> UserManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    var user = await UserManager.GetUserAsync(User);
+    var displayName = user?.FullName ?? User.Identity?.Name ?? "User";
+    
+    <div class="d-flex align-center gap-2">
+        <span class="text-muted" style="margin-right: 1rem;">Hello, <strong>@displayName</strong></span>
+        <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" class="d-flex">
+            <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 1rem;">Logout</button>
+        </form>
+    </div>
+}
+else
+{
+    <div class="d-flex gap-2">
+        <a class="nav-link" asp-controller="Account" asp-action="Login">Sign In</a>
+        <a class="btn btn-primary" asp-controller="Account" asp-action="Register" style="padding: 0.5rem 1rem; color: white; text-decoration: none;">Sign Up</a>
+    </div>
+}

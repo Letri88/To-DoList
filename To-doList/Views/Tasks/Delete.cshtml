@@ -1,0 +1,20 @@
+@model To_doList.Models.TodoTask
+
+@{
+    ViewData["Title"] = "Delete Task";
+}
+
+<div class="container animate-fade-in" style="max-width: 500px; text-align: center; margin-top: 4rem;">
+    <div class="card">
+        <h1 class="text-warning" style="margin-bottom: 1rem;">Move to Trash?</h1>
+        <p class="text-muted" style="margin-bottom: 2rem;">Are you sure you want to move <strong>"@Model.Title"</strong> to trash? You can restore it later.</p>
+        
+        <form asp-action="Delete">
+            <input type="hidden" asp-for="TaskId" />
+            <div class="d-flex gap-2 justify-between">
+                <a asp-action="Index" class="btn btn-secondary" style="width: 50%;">Cancel</a>
+                <button type="submit" class="btn btn-warning" style="width: 50%;">Move to Trash</button>
+            </div>
+        </form>
+    </div>
+</div>

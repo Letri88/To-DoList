@@ -1,0 +1,88 @@
+import java.rmi.*;
+public interface PTBAC2 extends Remote{
+String giai(double a, double b, double c) throws RemoteException;
+}
+
+import java.rmi.;
+import java.rmi.server.*;
+public class PTBAC2Impl extends UnicastRemoteObject implements PTBAC2{
+protected PTBAC2Impl() throws RemoteException{}
+public String giai(double a, double b, double c){
+if(a==0)
+{
+	if(b==0) 
+	return "vo Nghiem";
+return "x=" (-c/b);
+}
+....
+
+
+
+import java.rmi.*;
+import java.rmi.registry.*;
+public class Server{
+public static void main(String[] args) throws Exception{
+LocateRegistry.createRegistry(1099);
+Naming.rebind("rmi://localhost//PTBAC2", new PTBAC2Impl());
+System.out.println("RMI da san sang");
+}
+}
+
+
+import java.rmi.*;
+import java.util.Scanner;
+public class Client{
+public static void main(String[] args) throws Exception{
+PTBAC2 pt = (PTBAC2) Naming.lookup("rmi://localhost//PTBAC2");
+Scanner sc = new Scanner(System.in);
+System.out.println("Nhap a b c:")
+double a = sc.nextDouble();
+...
+System.out.println("ket qua =" +pt.giai(a,b,c));
+}
+Fibonacci client
+
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+public class FibonacciClient{
+    public static void main(String[] args) throws IOException{
+        Socket socket = new Socket("localhost",1234);
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Nhap n: ");
+        int n = sc.nextInt();
+        PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
+        out.println(n);
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        System.out.println("ket qua = " + in.readLine());
+        socket.close();
+    }
+}
+Server
+import java.io.*;
+import java.net.*;
+public class FibonacciServer{
+    static long fib(int n){
+        if(n<=1) return n;
+        long a=0,b=1;
+        for(int i=2; i<=n;i++){
+            long c= a+b;
+            a=b;
+            b=c;
+        }
+        return b;
+    }
+    public static void main(String[] args) throws IOException{
+        ServerSocket server = new ServerSocket(1234);
+        System.out.print("Server dang cho ket noi");
+        Socket socket = server.accept();
+        System.out.print("Client da ket noi");
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        int n = Integer.parseInt(in.readLine());
+        long kq = fib(n);
+        PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
+        out.println(kq);
+        socket.close();
+        server.close();
+    }
+}

@@ -1,0 +1,321 @@
+@model To_doList.PaginatedList<To_doList.Models.TodoTask>
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<To_doList.Models.AppUserModel> UserManager
+
+@{
+    ViewData["Title"] = "My Tasks";
+    var currentUserId = UserManager.GetUserId(User);
+}
+
+<div class="d-flex justify-between align-center mb-4 animate-fade-in">
+    <div>
+        <h1>My Tasks</h1>
+        <p class="text-muted">Manage your daily goals effectively</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Trash" class="btn btn-danger">
+            <svg width="20" height="20" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+            Thùng rác
+        </a>
+
+        <a asp-controller="Tags" asp-action="Index" class="btn btn-secondary">
+            Manage Tags
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Task
+        </a>
+    </div>
+</div>
+
+@{
+    var totalTasks = Model.Count();
+    var completedTasks = Model.Count(t => t.IsCompleted);
+    var pendingTasks = totalTasks - completedTasks;
+    var progress = totalTasks > 0 ? (int)((double)completedTasks / totalTasks * 100) : 0;
+}
+
+<div class="card mb-4 animate-fade-in" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: white; padding: 2rem;">
+    <div class="d-flex justify-between align-center">
+        <div>
+            <h2 style="margin: 0; font-size: 2.5rem; color: white;">@progress%</h2>
+            <p style="opacity: 0.9;">Completion Rate</p>
+        </div>
+        <div class="d-flex gap-4" style="text-align: center;">
+            <div>
+                <strong style="font-size: 1.5rem; display: block;">@totalTasks</strong>
+                <span style="font-size: 0.875rem; opacity: 0.8;">Total</span>
+            </div>
+            <div>
+                 <strong style="font-size: 1.5rem; display: block;">@completedTasks</strong>
+                <span style="font-size: 0.875rem; opacity: 0.8;">Done</span>
+            </div>
+            <div>
+                 <strong style="font-size: 1.5rem; display: block;">@pendingTasks</strong>
+                <span style="font-size: 0.875rem; opacity: 0.8;">Pending</span>
+            </div>
+        </div>
+    </div>
+    <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin-top: 1.5rem; overflow: hidden;">
+        <div style="background: white; width: @progress%; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
+    </div>
+</div>
+
+<div class="card mb-4 animate-fade-in">
+    <form asp-action="Index" method="get">
+        <div class="d-flex gap-2 mb-3">
+             <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="Search tasks..." style="flex-grow: 1;" />
+             <select name="statusFilter" class="form-control" style="width: auto;">
+                <option value="">All Status</option>
+                <!option value="completed" @(ViewData["CurrentStatus"] as string == "completed" ? "selected" : "")>Completed</!option>
+                <!option value="pending" @(ViewData["CurrentStatus"] as string == "pending" ? "selected" : "")>Pending</!option>
+            </select>
+            <select name="priorityFilter" class="form-control" style="width: auto;">
+                <option value="">All Priorities</option>
+                <!option value="1" @(ViewData["CurrentPriority"] as int? == 1 ? "selected" : "")>High</!option>
+                <!option value="2" @(ViewData["CurrentPriority"] as int? == 2 ? "selected" : "")>Medium</!option>
+                <!option value="3" @(ViewData["CurrentPriority"] as int? == 3 ? "selected" : "")>Low</!option>
+            </select>
+             <select name="tagFilter" class="form-control" style="width: auto;">
+                <option value="">All Tags</option>
+                @if (ViewBag.Tags != null)
+                {
+                    foreach (var tag in (IEnumerable<To_doList.Models.Tag>)ViewBag.Tags)
+                    {
+                        <!option value="@tag.TagId" @(ViewData["CurrentTag"] as int? == tag.TagId ? "selected" : "")>@tag.TagName</!option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="d-flex gap-2 align-center">
+             <label style="white-space: nowrap;">Due Date:</label>
+             <input type="date" name="startDate" value="@ViewData["CurrentStartDate"]" class="form-control" style="width: auto;" />
+             <span>to</span>
+             <input type="date" name="endDate" value="@ViewData["CurrentEndDate"]" class="form-control" style="width: auto;" />
+             
+             <button type="submit" class="btn btn-primary" style="margin-left: auto;">Filter</button>
+             <a asp-action="Index" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="grid-container">
+    @foreach (var item in Model) {
+        <div class="card animate-fade-in @(item.IsCompleted ? "task-completed" : "")" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="d-flex justify-between align-center mb-4">
+                <div class="d-flex gap-2 align-center">
+                    <span class="badge badge-priority-@item.Priority">
+                        @if(item.Priority == 1) { <text>High</text> }
+                        else if(item.Priority == 2) { <text>Medium</text> }
+                        else { <text>Low</text> }
+                    </span>
+                    @if (item.TaskTags != null)
+                    {
+                        foreach (var tt in item.TaskTags)
+                        {
+                            <span class="badge" style="background-color: @(tt.Tag?.Color ?? "#e2e8f0"); color: #1e293b; border: 1px solid rgba(0,0,0,0.1); font-size: 0.65rem;">
+                                @(tt.Tag?.TagName ?? "Tag")
+                            </span>
+                        }
+                    }
+                    @if (item.UserId != currentUserId)
+                    {
+                        <span class="badge" title="Assigned by @item.User?.UserName" style="background-color: var(--border-color); color: var(--text-primary); border: 1px solid rgba(0,0,0,0.1); font-size: 0.65rem;">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Shared
+                        </span>
+                    }
+                    else if (item.Assignments != null && item.Assignments.Any())
+                    {
+                        <span class="badge" title="Shared with @item.Assignments.Count people" style="background-color: var(--border-color); color: var(--text-primary); border: 1px solid rgba(0,0,0,0.1); font-size: 0.65rem;">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Shared
+                        </span>
+                    }
+                </div>
+                
+                <form asp-action="ToggleComplete" asp-route-id="@item.TaskId" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <label class="custom-checkbox" title="Click to toggle status">
+                         <input type="checkbox" onchange="this.form.submit()" @(item.IsCompleted ? "checked" : "") />
+                         <span style="font-size: 0.875rem; color: var(--text-secondary);">
+                             @(item.IsCompleted ? "Done" : "Pending")
+                         </span>
+                    </label>
+                </form>
+            </div>
+            
+            <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem; transition: all 0.2s;">@item.Title</h3>
+            
+            <div style="flex-grow: 1;">
+                 <p class="text-muted" style="margin-bottom: 1rem; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                    @item.Description
+                </p>
+            </div>
+           
+            <div class="d-flex justify-between align-center" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <div class="text-muted" style="font-size: 0.8rem;">
+                    @if(item.DueDate.HasValue) {
+                       <span style="@(item.DueDate.Value < DateTime.Now && !item.IsCompleted ? "color: var(--danger); font-weight: 600;" : "")">
+                           Due: @item.DueDate.Value.ToString("MMM dd")
+                       </span>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    @{
+                        var validSubtasks = item.SubTasks?.Where(st => st.StartDate.HasValue && st.DueDate.HasValue).ToList() ?? new List<To_doList.Models.SubTask>();
+                    }
+                    @if (validSubtasks.Any())
+                    {
+                        var stJson = System.Text.Json.JsonSerializer.Serialize(validSubtasks.Select(st => new {
+                            id = "Task" + st.SubTaskId,
+                            name = st.Title,
+                            start = st.StartDate.Value.ToString("yyyy-MM-dd"),
+                            end = st.DueDate.Value.ToString("yyyy-MM-dd"),
+                            progress = st.IsCompleted ? 100 : 0,
+                            dependencies = ""
+                        }));
+                        <button type="button" class="btn btn-outline-info btn-sm gantt-btn" data-title="@item.Title" data-gantt="@stJson" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; display: flex; align-items: center; gap: 4px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><rect x="8" y="14" width="8" height="4" fill="currentColor"></rect></svg>
+                            Timeline
+                        </button>
+                    }
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="startPomodoroForTask('@item.TaskId', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(item.Title))')" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; display: flex; align-items: center; gap: 4px;">
+                        ⏱️ Start
+                    </button>
+                    <a asp-action="Edit" asp-route-id="@item.TaskId" class="btn btn-secondary btn-sm ">Edit</a>
+                    @if(item.UserId == currentUserId)
+                    {
+                        <a asp-action="Delete" asp-route-id="@item.TaskId" class="btn btn-danger btn-sm">Del</a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div style="text-align: center; margin-top: 4rem; color: var(--text-secondary);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.5;">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <h3>No tasks found</h3>
+        <p>You're all caught up! or go ahead and create a new task.</p>
+    </div>
+}
+
+@{
+    var prevDisabled = !Model.HasPreviousPage ? "disabled" : "";
+    var nextDisabled = !Model.HasNextPage ? "disabled" : "";
+}
+
+<div class="d-flex justify-between align-center" style="margin-top: 2rem;">
+    <div class="text-muted">
+        Page @Model.PageIndex of @Model.TotalPages
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index"
+           asp-route-sortOrder="@ViewData["CurrentSort"]"
+           asp-route-pageNumber="@(Model.PageIndex - 1)"
+           asp-route-searchString="@ViewData["CurrentFilter"]"
+           asp-route-priorityFilter="@ViewData["CurrentPriority"]"
+           asp-route-tagFilter="@ViewData["CurrentTag"]"
+           asp-route-statusFilter="@ViewData["CurrentStatus"]"
+           asp-route-startDate="@ViewData["CurrentStartDate"]"
+           asp-route-endDate="@ViewData["CurrentEndDate"]"
+           class="btn btn-secondary @prevDisabled">
+            Previous
+        </a>
+        <a asp-action="Index"
+           asp-route-sortOrder="@ViewData["CurrentSort"]"
+           asp-route-pageNumber="@(Model.PageIndex + 1)"
+           asp-route-searchString="@ViewData["CurrentFilter"]"
+           asp-route-priorityFilter="@ViewData["CurrentPriority"]"
+           asp-route-tagFilter="@ViewData["CurrentTag"]"
+           asp-route-statusFilter="@ViewData["CurrentStatus"]"
+           asp-route-startDate="@ViewData["CurrentStartDate"]"
+           asp-route-endDate="@ViewData["CurrentEndDate"]"
+           class="btn btn-secondary @nextDisabled">
+            Next
+        </a>
+    </div>
+</div>
+
+<!-- Gantt Chart Modal -->
+<div id="ganttModal" class="animate-fade-in" style="display:none; position:fixed; z-index:1001; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+    <div style="background-color: var(--bg-surface, #ffffff); margin: 5% auto; padding: 25px; border: 1px solid var(--border-color, #e2e8f0); width: 90%; max-width: 1000px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div class="d-flex justify-between align-center mb-4">
+            <h2 id="gantt-title" style="margin:0; font-size:1.5rem; color: var(--text-primary);">Project Timeline</h2>
+            <button type="button" onclick="closeGanttModal()" class="btn btn-secondary btn-sm" style="font-size:1.5rem; line-height:1; width:36px; height:36px; padding:0; display:flex; justify-content:center; align-items:center; border-radius:50%;">&times;</button>
+        </div>
+        <div style="overflow-x: auto; background: var(--bg-card, #f8fafc); border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0); padding: 10px;">
+             <svg id="gantt-chart"></svg>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+    <script>
+        document.querySelectorAll('.gantt-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const title = this.getAttribute('data-title');
+                const rawData = this.getAttribute('data-gantt');
+                let tasks = [];
+                try {
+                    tasks = JSON.parse(rawData);
+                } catch(e) { console.error("Invalid gantt data", e); }
+                
+                if(tasks.length === 0) return;
+
+                document.getElementById('gantt-title').innerText = "Timeline: " + title;
+                document.getElementById('ganttModal').style.display = 'block';
+                
+                // Clear previous chart
+                document.getElementById('gantt-chart').innerHTML = '';
+                
+                // Render frappe gantt
+                var gantt = new Gantt("#gantt-chart", tasks, {
+                    header_height: 50,
+                    column_width: 30,
+                    step: 24,
+                    view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+                    bar_height: 25,
+                    bar_corner_radius: 6,
+                    arrow_curve: 5,
+                    padding: 18,
+                    view_mode: 'Day',   
+                    date_format: 'YYYY-MM-DD',
+                    custom_popup_html: function(task) {
+                        const end_date = task._end.toLocaleDateString();
+                        const start_date = task._start.toLocaleDateString();
+                        const statusText = task.progress === 100 ? 'Xong' : 'Chưa xong';
+                        const statusColor = task.progress === 100 ? '#10b981' : '#f59e0b';
+                        return `<div style="padding: 12px; background: rgba(15, 23, 42, 0.9); color: white; border-radius: 8px; font-size: 0.85rem; min-width: 150px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                  <strong style="font-size: 1rem; margin-bottom: 5px; display: block;">${task.name}</strong>
+                                  <div style="opacity: 0.9;">Bắt đầu: ${start_date}</div>
+                                  <div style="opacity: 0.9;">Kết thúc: ${end_date}</div>
+                                  <div style="margin-top: 5px; font-weight: bold; color: ${statusColor};">Trạng thái: ${statusText}</div>
+                                </div>`;
+                    }
+                });
+            });
+        });
+
+        function closeGanttModal() {
+            document.getElementById('ganttModal').style.display = 'none';
+        }
+    </script>
+}

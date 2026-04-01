@@ -1,0 +1,64 @@
+@using To_doList.ViewModels
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Sign Up";
+}
+
+<div class="container animate-fade-in" style="max-width: 450px; margin: 4rem auto 0;">
+    <div class="card" style="text-align: center; padding: 2.5rem;">
+        <div class="mb-4">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/>
+                <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+            <h1>Create Account</h1>
+            <p class="text-muted">Join us to organize your life</p>
+        </div>
+
+        <form asp-action="Register">
+            <div asp-validation-summary="ModelOnly" class="text-danger" style="margin-bottom: 1rem;"></div>
+
+            <div class="form-group" style="text-align: left;">
+                <label asp-for="FullName" class="form-label">Full Name</label>
+                <input asp-for="FullName" class="form-control" placeholder="Enter your full name" />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="text-align: left;">
+                <label asp-for="Username" class="form-label">Username</label>
+                <input asp-for="Username" class="form-control" placeholder="Choose a username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="text-align: left;">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" class="form-control" placeholder="your@email.com" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="text-align: left;">
+                <label asp-for="Password" class="form-label">Password</label>
+                <input asp-for="Password" class="form-control" placeholder="Create a password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="text-align: left;">
+                <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirm your password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Account</button>
+        </form>
+
+        <div style="margin-top: 2rem; font-size: 0.9rem;">
+            <p class="text-muted">Already have an account? <a asp-action="Login" style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Sign in</a></p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

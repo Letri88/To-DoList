@@ -1,0 +1,332 @@
+<div id="clock-widget" class="clock-widget-container minimized">
+    <div class="clock-header" onclick="toggleClockWidget()">
+        <span id="clock-header-text">⏱️ focus.timer</span>
+        <button id="clock-toggle-btn">▲</button>
+    </div>
+    <div class="clock-body">
+        <div class="clock-tabs">
+            <button id="tab-btn-timer" class="clock-tab active" onclick="switchClockTab('timer')">Timer</button>
+            <button id="tab-btn-stopwatch" class="clock-tab" onclick="switchClockTab('stopwatch')">Stopwatch</button>
+        </div>
+        
+        <!-- Timer -->
+        <div id="tab-timer" class="clock-content active">
+            <div class="time-display" id="timer-display">25:00</div>
+            <div class="d-flex gap-2 justify-center mt-2">
+                <button class="btn btn-sm btn-primary" onclick="startTimer()">▶</button>
+                <button class="btn btn-sm btn-secondary" onclick="pauseTimer()">⏸</button>
+                <button class="btn btn-sm btn-danger" onclick="resetTimer()">⏹</button>
+            </div>
+            <div class="mt-3 text-center">
+                <select id="timer-presets" class="form-control" style="width: 100%; border-radius: 6px; padding: 4px; font-size: 0.85rem;" onchange="setTimerPreset(this.value)">
+                    <option value="25">25 min (Pomodoro)</option>
+                    <option value="5">5 min (Short Break)</option>
+                    <option value="15">15 min (Long Break)</option>
+                    <option value="60">60 min (Deep Work)</option>
+                </select>
+            </div>
+            <div id="timer-task-binding" style="display:none; margin-top:10px; text-align:center; font-size:0.8rem; color:var(--primary-color);">
+                Tracking: <span id="timer-task-name"></span>
+            </div>
+        </div>
+
+        <!-- Stopwatch -->
+        <div id="tab-stopwatch" class="clock-content" style="display: none;">
+            <div class="time-display" id="stopwatch-display">00:00:00</div>
+            <div class="d-flex gap-2 justify-center mt-2">
+                <button class="btn btn-sm btn-primary" onclick="startStopwatch()">▶</button>
+                <button class="btn btn-sm btn-secondary" onclick="pauseStopwatch()">⏸</button>
+                <button class="btn btn-sm btn-danger" onclick="resetStopwatch()">⏹</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.clock-widget-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 250px;
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    font-family: inherit;
+}
+html[data-theme='dark'] .clock-widget-container {
+    background: #1e293b;
+    border-color: #334155;
+}
+.clock-widget-container.minimized .clock-body {
+    display: none;
+}
+.clock-widget-container.minimized {
+    width: 160px;
+}
+.clock-header {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: white;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.clock-header button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+.clock-body {
+    padding: 15px;
+}
+.clock-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+.clock-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    color: var(--text-secondary, #64748b);
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+}
+.clock-tab.active {
+    color: var(--primary-color, #6366f1);
+    border-bottom: 2px solid var(--primary-color, #6366f1);
+}
+.time-display {
+    font-size: 2.25rem;
+    font-weight: 700;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    color: var(--text-primary, #0f172a);
+    margin-bottom: 10px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+html[data-theme='dark'] .time-display {
+    color: #f8fafc;
+}
+</style>
+
+<script>
+// UI functions
+function toggleClockWidget() {
+    const w = document.getElementById('clock-widget');
+    const btn = document.getElementById('clock-toggle-btn');
+    if(w.classList.contains('minimized')) {
+        w.classList.remove('minimized');
+        btn.innerText = '▼';
+        localStorage.setItem('clock_minimized', 'false');
+    } else {
+        w.classList.add('minimized');
+        btn.innerText = '▲';
+        localStorage.setItem('clock_minimized', 'true');
+    }
+}
+
+function switchClockTab(tab) {
+    document.querySelectorAll('.clock-content').forEach(e => e.style.display = 'none');
+    document.querySelectorAll('.clock-tab').forEach(e => e.classList.remove('active'));
+    
+    document.getElementById('tab-' + tab).style.display = 'block';
+    document.getElementById('tab-btn-' + tab).classList.add('active');
+    localStorage.setItem('clock_tab', tab);
+}
+
+// Global Timer Variables
+let timerInterval = null;
+let timerEndTime = 0; // ms timestamp
+let timerPausedTimeLeft = 25 * 60 * 1000; // ms
+let timerIsRunning = false;
+
+// Global Stopwatch Variables
+let stopInterval = null;
+let stopStartTime = 0; // ms
+let stopElapsed = 0; // ms
+let stopIsRunning = false;
+
+// Helpers
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function formatTime(ms, includeHours=false) {
+    if(ms < 0) ms = 0;
+    let totalSeconds = Math.floor(ms / 1000);
+    let hours = Math.floor(totalSeconds / 3600);
+    let minutes = Math.floor((totalSeconds % 3600) / 60);
+    let seconds = totalSeconds % 60;
+    if(includeHours || hours > 0) return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+    return pad(minutes) + ':' + pad(seconds);
+}
+
+function playAlarm() {
+    try {
+        let audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.play();
+    } catch(e) {}
+}
+
+/** TIMER LOGIC **/
+function updateTimerDisplay() {
+    let timeLeft = timerIsRunning ? (timerEndTime - Date.now()) : timerPausedTimeLeft;
+    if (timeLeft <= 0) {
+        document.getElementById('timer-display').innerText = "00:00";
+        if (timerIsRunning) {
+            pauseTimer();
+            timerPausedTimeLeft = 25 * 60 * 1000; // default reset on finish
+            playAlarm();
+            if(Notification.permission === "granted") {
+                new Notification("Time's up!", { body: "Your focus session is complete." });
+            }
+        }
+        return;
+    }
+    document.getElementById('timer-display').innerText = formatTime(timeLeft);
+    if(timerIsRunning) {
+        document.title = formatTime(timeLeft) + " - Focus";
+    } else {
+         document.title = "To-Do List";
+    }
+}
+
+function startTimer() {
+    if(timerIsRunning) return;
+    if(Notification.permission === "default") Notification.requestPermission();
+    timerEndTime = Date.now() + timerPausedTimeLeft;
+    timerIsRunning = true;
+    localStorage.setItem('timer_running', 'true');
+    localStorage.setItem('timer_end_time', timerEndTime);
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+    updateTimerDisplay();
+}
+
+function pauseTimer() {
+    if(!timerIsRunning) return;
+    clearInterval(timerInterval);
+    timerPausedTimeLeft = timerEndTime - Date.now();
+    if(timerPausedTimeLeft < 0) timerPausedTimeLeft = 0;
+    timerIsRunning = false;
+    localStorage.setItem('timer_running', 'false');
+    localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
+    document.title = "To-Do List";
+    updateTimerDisplay();
+}
+
+function resetTimer() {
+    pauseTimer();
+    let mins = parseInt(document.getElementById('timer-presets').value) || 25;
+    timerPausedTimeLeft = mins * 60 * 1000;
+    localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
+    updateTimerDisplay();
+    document.getElementById('timer-task-binding').style.display = 'none';
+}
+
+function setTimerPreset(mins) {
+    if(!timerIsRunning) {
+        timerPausedTimeLeft = mins * 60 * 1000;
+        localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
+        updateTimerDisplay();
+    }
+}
+
+// API for starting timer from Task list
+window.startPomodoroForTask = function(taskId, taskName) {
+    // Open widget
+    const w = document.getElementById('clock-widget');
+    if(w.classList.contains('minimized')) toggleClockWidget();
+    switchClockTab('timer');
+    
+    // Set text
+    document.getElementById('timer-task-binding').style.display = 'block';
+    document.getElementById('timer-task-name').innerText = taskName;
+    document.getElementById('clock-header-text').innerText = "⏱️ " + (taskName.length > 10 ? taskName.substring(0,10)+"..." : taskName);
+    
+    // Reset to 25m and start
+    pauseTimer();
+    timerPausedTimeLeft = 25 * 60 * 1000;
+    startTimer();
+};
+
+/** STOPWATCH LOGIC **/
+function updateStopwatchDisplay() {
+    let el = timerIsRunning ? 0 : 0; // dummy
+    let currentElapsed = stopIsRunning ? (Date.now() - stopStartTime + stopElapsed) : stopElapsed;
+    document.getElementById('stopwatch-display').innerText = formatTime(currentElapsed, true);
+}
+
+function startStopwatch() {
+    if(stopIsRunning) return;
+    stopStartTime = Date.now();
+    stopIsRunning = true;
+    localStorage.setItem('stop_running', 'true');
+    localStorage.setItem('stop_start_time', stopStartTime);
+    stopInterval = setInterval(updateStopwatchDisplay, 1000);
+    updateStopwatchDisplay();
+}
+
+function pauseStopwatch() {
+    if(!stopIsRunning) return;
+    clearInterval(stopInterval);
+    stopElapsed += (Date.now() - stopStartTime);
+    stopIsRunning = false;
+    localStorage.setItem('stop_running', 'false');
+    localStorage.setItem('stop_elapsed', stopElapsed);
+    updateStopwatchDisplay();
+}
+
+function resetStopwatch() {
+    pauseStopwatch();
+    stopElapsed = 0;
+    localStorage.setItem('stop_elapsed', '0');
+    updateStopwatchDisplay();
+}
+
+/** INIT FROM STORAGE **/
+window.addEventListener('DOMContentLoaded', () => {
+    // Restore UI state
+    if(localStorage.getItem('clock_minimized') === 'false') {
+        document.getElementById('clock-widget').classList.remove('minimized');
+        document.getElementById('clock-toggle-btn').innerText = '▼';
+    }
+    const savedTab = localStorage.getItem('clock_tab');
+    if(savedTab) switchClockTab(savedTab);
+    
+    // Timer state
+    if(localStorage.getItem('timer_running') === 'true') {
+        timerEndTime = parseInt(localStorage.getItem('timer_end_time')) || 0;
+        if(timerEndTime > Date.now()) {
+            timerIsRunning = true;
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        } else {
+            // Missed alarm
+            timerPausedTimeLeft = 25 * 60 * 1000;
+        }
+    } else {
+        timerPausedTimeLeft = parseInt(localStorage.getItem('timer_paused_left')) || (25 * 60 * 1000);
+    }
+    updateTimerDisplay();
+
+    // Stopwatch state
+    if(localStorage.getItem('stop_running') === 'true') {
+        stopStartTime = parseInt(localStorage.getItem('stop_start_time')) || Date.now();
+        stopElapsed = parseInt(localStorage.getItem('stop_elapsed')) || 0;
+        stopIsRunning = true;
+        stopInterval = setInterval(updateStopwatchDisplay, 1000);
+    } else {
+        stopElapsed = parseInt(localStorage.getItem('stop_elapsed')) || 0;
+    }
+    updateStopwatchDisplay();
+});
+</script>
