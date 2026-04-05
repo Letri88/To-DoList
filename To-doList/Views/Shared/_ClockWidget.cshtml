@@ -1,44 +1,82 @@
-<div id="clock-widget" class="clock-widget-container minimized">
-    <div class="clock-header" onclick="toggleClockWidget()">
-        <span id="clock-header-text">⏱️ focus.timer</span>
-        <button id="clock-toggle-btn">▲</button>
+<div id="clock-widget" class="clock-widget-container dark-theme minimized">
+    <div class="clock-header" onclick="toggleClockWidget(event)">
+        <span id="clock-header-text"><i class="bi bi-stopwatch"></i> focus.timer</span>
+        <div class="header-actions">
+            <button id="clock-expand-btn" onclick="toggleExpandWidget(event); event.stopPropagation();" title="Expand / Shrink"><i class="bi bi-arrows-angle-expand"></i></button>
+            <button id="clock-toggle-btn" title="Minimize / Restore"><i class="bi bi-chevron-up"></i></button>
+        </div>
     </div>
     <div class="clock-body">
-        <div class="clock-tabs">
-            <button id="tab-btn-timer" class="clock-tab active" onclick="switchClockTab('timer')">Timer</button>
-            <button id="tab-btn-stopwatch" class="clock-tab" onclick="switchClockTab('stopwatch')">Stopwatch</button>
-        </div>
         
-        <!-- Timer -->
-        <div id="tab-timer" class="clock-content active">
-            <div class="time-display" id="timer-display">25:00</div>
-            <div class="d-flex gap-2 justify-center mt-2">
-                <button class="btn btn-sm btn-primary" onclick="startTimer()">▶</button>
-                <button class="btn btn-sm btn-secondary" onclick="pauseTimer()">⏸</button>
-                <button class="btn btn-sm btn-danger" onclick="resetTimer()">⏹</button>
+        <!-- Timer View -->
+        <div id="view-timer-main" class="clock-content active">
+            <div class="timer-top-bar mt-2 mb-2 px-3 d-flex justify-content-between align-items-center">
+                <span id="timer-name-label" class="fw-bold">25 min (Pomodoro)</span>
             </div>
-            <div class="mt-3 text-center">
-                <select id="timer-presets" class="form-control" style="width: 100%; border-radius: 6px; padding: 4px; font-size: 0.85rem;" onchange="setTimerPreset(this.value)">
-                    <option value="25">25 min (Pomodoro)</option>
-                    <option value="5">5 min (Short Break)</option>
-                    <option value="15">15 min (Long Break)</option>
-                    <option value="60">60 min (Deep Work)</option>
-                </select>
+            
+            <div class="timer-circle-container" onclick="openTimerEdit()">
+                <svg class="progress-ring" width="220" height="220">
+                    <circle class="progress-ring__track" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="transparent" r="100" cx="110" cy="110"/>
+                    <circle id="progress-ring-circle" class="progress-ring__circle" stroke="#a855f7" stroke-width="8" fill="transparent" r="100" cx="110" cy="110" stroke-linecap="round"/>
+                </svg>
+                <div class="time-display" id="timer-display">25:00</div>
             </div>
-            <div id="timer-task-binding" style="display:none; margin-top:10px; text-align:center; font-size:0.8rem; color:var(--primary-color);">
+            
+            <div id="timer-task-binding" style="display:none; text-align:center; font-size:0.8rem; color:var(--primary-color);">
                 Tracking: <span id="timer-task-name"></span>
+            </div>
+
+            <div class="timer-controls">
+                <button class="btn-control play-pause" onclick="toggleTimerPlay()">
+                    <span id="timer-play-icon"><i class="bi bi-play-fill"></i></span>
+                </button>
+                <button class="btn-control reset" onclick="resetTimer()">
+                    <span><i class="bi bi-arrow-counterclockwise"></i></span>
+                </button>
             </div>
         </div>
 
-        <!-- Stopwatch -->
-        <div id="tab-stopwatch" class="clock-content" style="display: none;">
-            <div class="time-display" id="stopwatch-display">00:00:00</div>
-            <div class="d-flex gap-2 justify-center mt-2">
-                <button class="btn btn-sm btn-primary" onclick="startStopwatch()">▶</button>
-                <button class="btn btn-sm btn-secondary" onclick="pauseStopwatch()">⏸</button>
-                <button class="btn btn-sm btn-danger" onclick="resetStopwatch()">⏹</button>
+        <!-- Edit Timer View -->
+        <div id="view-timer-edit" class="clock-content" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0 fw-bold">Edit timer</h5>
+                <button class="btn btn-link text-danger p-0 border-0" onclick="resetTimerDefaults()" title="Reset to defaults"><i class="bi bi-trash"></i></button>
+            </div>
+            
+            <div class="time-scroller-container">
+                <!-- Hours -->
+                <div class="time-scroller">
+                    <button onclick="changeEditTime('h', 1)"><i class="bi bi-chevron-compact-up"></i></button>
+                    <input type="number" id="edit-hh" value="00" min="0" max="99" onchange="padInput(this)">
+                    <button onclick="changeEditTime('h', -1)"><i class="bi bi-chevron-compact-down"></i></button>
+                </div>
+                <span class="colon">:</span>
+                <!-- Minutes -->
+                <div class="time-scroller">
+                    <button onclick="changeEditTime('m', 1)"><i class="bi bi-chevron-compact-up"></i></button>
+                    <input type="number" id="edit-mm" value="25" min="0" max="59" onchange="padInput(this)">
+                    <button onclick="changeEditTime('m', -1)"><i class="bi bi-chevron-compact-down"></i></button>
+                </div>
+                <span class="colon">:</span>
+                <!-- Seconds -->
+                <div class="time-scroller">
+                    <button onclick="changeEditTime('s', 1)"><i class="bi bi-chevron-compact-up"></i></button>
+                    <input type="number" id="edit-ss" value="00" min="0" max="59" onchange="padInput(this)">
+                    <button onclick="changeEditTime('s', -1)"><i class="bi bi-chevron-compact-down"></i></button>
+                </div>
+            </div>
+            
+            <div class="mt-4 timer-name-input-wrapper">
+                <span class="edit-icon"><i class="bi bi-pencil"></i></span>
+                <input type="text" id="edit-timer-name" class="form-control" value="25 min (Pomodoro)">
+            </div>
+            
+            <div class="d-flex gap-2 mt-4">
+                <button class="btn btn-secondary flex-grow-1" style="background:#555; border:none; border-radius:8px;" onclick="saveTimerEdit()"><i class="bi bi-floppy"></i> Save</button>
+                <button class="btn flex-grow-1" style="background:transparent; border:1px solid #555; color:white; border-radius:8px;" onclick="closeTimerEdit()"><i class="bi bi-x"></i> Cancel</button>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -47,127 +85,274 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 250px;
-    background: var(--bg-surface, #ffffff);
-    border: 1px solid var(--border-color, #e2e8f0);
+    width: 300px;
+    background: #1e1e1e; /* Windows Dark App Style */
+    color: #f8fafc;
+    border: 1px solid #333;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     z-index: 1000;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-    font-family: inherit;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-html[data-theme='dark'] .clock-widget-container {
-    background: #1e293b;
-    border-color: #334155;
+.clock-widget-container.expanded {
+    width: 400px;
+    bottom: 50%;
+    right: 50%;
+    transform: translate(50%, 50%);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
 }
 .clock-widget-container.minimized .clock-body {
     display: none;
 }
 .clock-widget-container.minimized {
-    width: 160px;
+    width: 200px;
 }
 .clock-header {
-    background: linear-gradient(135deg, #6366f1, #a855f7);
-    color: white;
+    background: #2d2d2d;
     padding: 10px 15px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid #444;
 }
-.clock-header button {
+.clock-header span {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.header-actions button {
     background: none;
     border: none;
-    color: white;
-    font-size: 14px;
+    color: #ccc;
+    font-size: 16px;
     cursor: pointer;
+    margin-left: 5px;
+}
+.header-actions button:hover {
+    color: #fff;
 }
 .clock-body {
     padding: 15px;
+    background: #202020;
 }
-.clock-tabs {
-    display: flex;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--border-color, #eee);
-}
-.clock-tab {
-    flex: 1;
-    background: none;
-    border: none;
-    padding: 5px;
+.timer-circle-container {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto;
     cursor: pointer;
-    color: var(--text-secondary, #64748b);
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: color 0.2s;
+    transition: transform 0.2s;
 }
-.clock-tab.active {
-    color: var(--primary-color, #6366f1);
-    border-bottom: 2px solid var(--primary-color, #6366f1);
+.timer-circle-container:hover {
+    transform: scale(1.02);
+}
+.progress-ring__circle {
+    transition: stroke-dashoffset 0.5s linear;
+    transform: rotate(-90deg) scaleX(-1);
+    transform-origin: 50% 50%;
 }
 .time-display {
-    font-size: 2.25rem;
-    font-weight: 700;
-    text-align: center;
-    font-family: 'Courier New', Courier, monospace;
-    color: var(--text-primary, #0f172a);
-    margin-bottom: 10px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.75rem;
+    font-weight: 600;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: -1px;
 }
-html[data-theme='dark'] .time-display {
-    color: #f8fafc;
+.expanded .timer-circle-container {
+    width: 280px;
+    height: 280px;
+}
+.expanded .progress-ring {
+    width: 280px;
+    height: 280px;
+}
+.expanded .progress-ring__track, .expanded .progress-ring__circle {
+    cx: 140; cy: 140; r: 130;
+}
+.expanded .time-display {
+    font-size: 3.5rem;
+}
+.timer-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+.btn-control {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-control.play-pause {
+    background: #a855f7;
+    color: white;
+}
+.btn-control.play-pause:hover {
+    background: #9333ea;
+}
+.btn-control.reset {
+    background: #333;
+    color: #ccc;
+}
+.btn-control.reset:hover {
+    background: #444;
+    color: #fff;
+}
+
+/* Edit UI classes */
+.time-scroller-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    background: #262626;
+    padding: 10px;
+    border-radius: 12px;
+}
+.time-scroller {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.time-scroller button {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    padding: 5px;
+    cursor: pointer;
+}
+.time-scroller button:hover {
+    color: #fff;
+}
+.time-scroller input {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: white;
+    font-size: 2rem;
+    font-weight: bold;
+    width: 60px;
+    text-align: center;
+    border-radius: 8px;
+    padding: 5px 0;
+    -moz-appearance: textfield;
+}
+.time-scroller input::-webkit-outer-spin-button,
+.time-scroller input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.colon {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #666;
+    margin: 0 5px;
+}
+.timer-name-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.timer-name-input-wrapper .edit-icon {
+    position: absolute;
+    left: 10px;
+    color: #888;
+}
+.timer-name-input-wrapper input {
+    width: 100%;
+    padding: 10px 10px 10px 35px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: white;
+    border-radius: 8px;
+}
+.timer-name-input-wrapper input:focus {
+    background: #2a2a2a;
+    outline: none;
+    border-color: #a855f7;
+    box-shadow: none;
 }
 </style>
 
 <script>
-// UI functions
-function toggleClockWidget() {
+// UI Toggles
+function toggleClockWidget(e) {
+    if(e.target.closest('.header-actions')) return;
     const w = document.getElementById('clock-widget');
-    const btn = document.getElementById('clock-toggle-btn');
+    const btnIcon = document.querySelector('#clock-toggle-btn i');
     if(w.classList.contains('minimized')) {
         w.classList.remove('minimized');
-        btn.innerText = '▼';
+        btnIcon.className = 'bi bi-chevron-down';
         localStorage.setItem('clock_minimized', 'false');
+        if(!w.classList.contains('expanded')) initProgressRing();
     } else {
         w.classList.add('minimized');
-        btn.innerText = '▲';
+        btnIcon.className = 'bi bi-chevron-up';
         localStorage.setItem('clock_minimized', 'true');
     }
 }
 
-function switchClockTab(tab) {
-    document.querySelectorAll('.clock-content').forEach(e => e.style.display = 'none');
-    document.querySelectorAll('.clock-tab').forEach(e => e.classList.remove('active'));
-    
-    document.getElementById('tab-' + tab).style.display = 'block';
-    document.getElementById('tab-btn-' + tab).classList.add('active');
-    localStorage.setItem('clock_tab', tab);
+function toggleExpandWidget(e) {
+    const w = document.getElementById('clock-widget');
+    const btnIcon = document.querySelector('#clock-expand-btn i');
+    if(w.classList.contains('expanded')) {
+        w.classList.remove('expanded');
+        btnIcon.className = 'bi bi-arrows-angle-expand';
+        localStorage.setItem('clock_expanded', 'false');
+    } else {
+        w.classList.remove('minimized');
+        document.querySelector('#clock-toggle-btn i').className = 'bi bi-chevron-down';
+        localStorage.setItem('clock_minimized', 'false');
+        
+        w.classList.add('expanded');
+        btnIcon.className = 'bi bi-arrows-angle-contract'; // Shrink icon
+        localStorage.setItem('clock_expanded', 'true');
+    }
+    setTimeout(initProgressRing, 100); // Re-calc circle circumference
 }
 
 // Global Timer Variables
 let timerInterval = null;
 let timerEndTime = 0; // ms timestamp
+let timerTotalTime = 25 * 60 * 1000; // Total fixed duration for circle Math
 let timerPausedTimeLeft = 25 * 60 * 1000; // ms
 let timerIsRunning = false;
+let customTimerName = "25 min (Pomodoro)";
 
-// Global Stopwatch Variables
-let stopInterval = null;
-let stopStartTime = 0; // ms
-let stopElapsed = 0; // ms
-let stopIsRunning = false;
+let circleCircumference = 0;
 
 // Helpers
-function pad(n) { return (n < 10 ? '0' : '') + n; }
-function formatTime(ms, includeHours=false) {
+function pad(n) { return (n < 10 && n !== null && n !== "") ? '0' + n : n; }
+function padInput(input) {
+    let val = parseInt(input.value);
+    if(isNaN(val)) val = 0;
+    input.value = pad(val);
+}
+
+function formatTime(ms) {
     if(ms < 0) ms = 0;
-    let totalSeconds = Math.floor(ms / 1000);
+    let totalSeconds = Math.ceil(ms / 1000); // ceil so it nicely stays on the second
     let hours = Math.floor(totalSeconds / 3600);
     let minutes = Math.floor((totalSeconds % 3600) / 60);
     let seconds = totalSeconds % 60;
-    if(includeHours || hours > 0) return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+    if(hours > 0) return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
     return pad(minutes) + ':' + pad(seconds);
 }
 
@@ -178,14 +363,38 @@ function playAlarm() {
     } catch(e) {}
 }
 
-/** TIMER LOGIC **/
+function initProgressRing() {
+    const circle = document.getElementById('progress-ring-circle');
+    const w = document.getElementById('clock-widget');
+    const r = w.classList.contains('expanded') ? 130 : 100;
+    circleCircumference = r * 2 * Math.PI;
+    circle.style.strokeDasharray = `${circleCircumference} ${circleCircumference}`;
+    updateProgressRing();
+}
+
+function setProgress(percent) {
+    const offset = circleCircumference - percent * circleCircumference;
+    const circle = document.getElementById('progress-ring-circle');
+    circle.style.strokeDashoffset = offset;
+}
+
+function updateProgressRing() {
+    let timeLeft = timerIsRunning ? (timerEndTime - Date.now()) : timerPausedTimeLeft;
+    if(timeLeft < 0) timeLeft = 0;
+    let percent = timerTotalTime > 0 ? (timeLeft / timerTotalTime) : 0;
+    if(percent > 1) percent = 1;
+    setProgress(percent);
+}
+
 function updateTimerDisplay() {
     let timeLeft = timerIsRunning ? (timerEndTime - Date.now()) : timerPausedTimeLeft;
+    
     if (timeLeft <= 0) {
         document.getElementById('timer-display').innerText = "00:00";
+        setProgress(0);
         if (timerIsRunning) {
             pauseTimer();
-            timerPausedTimeLeft = 25 * 60 * 1000; // default reset on finish
+            timerPausedTimeLeft = timerTotalTime; // auto reset visual
             playAlarm();
             if(Notification.permission === "granted") {
                 new Notification("Time's up!", { body: "Your focus session is complete." });
@@ -193,22 +402,33 @@ function updateTimerDisplay() {
         }
         return;
     }
+    
     document.getElementById('timer-display').innerText = formatTime(timeLeft);
+    updateProgressRing();
+    
     if(timerIsRunning) {
         document.title = formatTime(timeLeft) + " - Focus";
     } else {
-         document.title = "To-Do List";
+        document.title = "To-Do List";
     }
+}
+
+function toggleTimerPlay() {
+    if(timerIsRunning) pauseTimer();
+    else startTimer();
 }
 
 function startTimer() {
     if(timerIsRunning) return;
+    if(timerPausedTimeLeft <= 0) timerPausedTimeLeft = timerTotalTime;
+    
     if(Notification.permission === "default") Notification.requestPermission();
     timerEndTime = Date.now() + timerPausedTimeLeft;
     timerIsRunning = true;
+    document.getElementById('timer-play-icon').innerHTML = '<i class="bi bi-pause-fill"></i>';
     localStorage.setItem('timer_running', 'true');
     localStorage.setItem('timer_end_time', timerEndTime);
-    timerInterval = setInterval(updateTimerDisplay, 1000);
+    timerInterval = setInterval(updateTimerDisplay, 100); // 100ms for smooth ring animation
     updateTimerDisplay();
 }
 
@@ -218,6 +438,7 @@ function pauseTimer() {
     timerPausedTimeLeft = timerEndTime - Date.now();
     if(timerPausedTimeLeft < 0) timerPausedTimeLeft = 0;
     timerIsRunning = false;
+    document.getElementById('timer-play-icon').innerHTML = '<i class="bi bi-play-fill"></i>';
     localStorage.setItem('timer_running', 'false');
     localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
     document.title = "To-Do List";
@@ -226,107 +447,125 @@ function pauseTimer() {
 
 function resetTimer() {
     pauseTimer();
-    let mins = parseInt(document.getElementById('timer-presets').value) || 25;
-    timerPausedTimeLeft = mins * 60 * 1000;
+    timerPausedTimeLeft = timerTotalTime;
     localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
-    updateTimerDisplay();
     document.getElementById('timer-task-binding').style.display = 'none';
+    updateTimerDisplay();
 }
 
-function setTimerPreset(mins) {
-    if(!timerIsRunning) {
-        timerPausedTimeLeft = mins * 60 * 1000;
-        localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
-        updateTimerDisplay();
-    }
-}
-
-// API for starting timer from Task list
-window.startPomodoroForTask = function(taskId, taskName) {
-    // Open widget
-    const w = document.getElementById('clock-widget');
-    if(w.classList.contains('minimized')) toggleClockWidget();
-    switchClockTab('timer');
+// Edit Timer Functions
+function openTimerEdit() {
+    pauseTimer();
+    document.getElementById('view-timer-main').style.display = 'none';
+    document.getElementById('view-timer-edit').style.display = 'block';
     
-    // Set text
+    // Fill current total time into selectors
+    let totalSeconds = Math.floor(timerTotalTime / 1000);
+    document.getElementById('edit-hh').value = pad(Math.floor(totalSeconds / 3600));
+    document.getElementById('edit-mm').value = pad(Math.floor((totalSeconds % 3600) / 60));
+    document.getElementById('edit-ss').value = pad(totalSeconds % 60);
+    document.getElementById('edit-timer-name').value = customTimerName;
+}
+
+function closeTimerEdit() {
+    document.getElementById('view-timer-edit').style.display = 'none';
+    document.getElementById('view-timer-main').style.display = 'block';
+    initProgressRing(); // Redraw in case size changed
+}
+
+function changeEditTime(unit, dir) {
+    let input = unit === 'h' ? document.getElementById('edit-hh') : 
+               (unit === 'm' ? document.getElementById('edit-mm') : document.getElementById('edit-ss'));
+    let max = unit === 'h' ? 99 : 59;
+    let val = parseInt(input.value) || 0;
+    val += dir;
+    if(val < 0) val = max;
+    if(val > max) val = 0;
+    input.value = pad(val);
+}
+
+function saveTimerEdit() {
+    let h = parseInt(document.getElementById('edit-hh').value) || 0;
+    let m = parseInt(document.getElementById('edit-mm').value) || 0;
+    let s = parseInt(document.getElementById('edit-ss').value) || 0;
+    let newMs = ((h * 3600) + (m * 60) + s) * 1000;
+    
+    if(newMs <= 0) return alert("Please set a time greater than 0");
+    
+    timerTotalTime = newMs;
+    timerPausedTimeLeft = newMs;
+    customTimerName = document.getElementById('edit-timer-name').value || "Timer";
+    
+    localStorage.setItem('timer_total_time', timerTotalTime);
+    localStorage.setItem('timer_paused_left', timerPausedTimeLeft);
+    localStorage.setItem('timer_name', customTimerName);
+    
+    document.getElementById('timer-name-label').innerText = customTimerName;
+    
+    closeTimerEdit();
+    updateTimerDisplay();
+}
+
+function resetTimerDefaults() {
+    document.getElementById('edit-hh').value = "00";
+    document.getElementById('edit-mm').value = "25";
+    document.getElementById('edit-ss').value = "00";
+    document.getElementById('edit-timer-name').value = "25 min (Pomodoro)";
+}
+
+
+window.startPomodoroForTask = function(taskId, taskName) {
+    const w = document.getElementById('clock-widget');
+    if(w.classList.contains('minimized')) toggleClockWidget({target: w}); // open it
+    closeTimerEdit();
+    
     document.getElementById('timer-task-binding').style.display = 'block';
     document.getElementById('timer-task-name').innerText = taskName;
-    document.getElementById('clock-header-text').innerText = "⏱️ " + (taskName.length > 10 ? taskName.substring(0,10)+"..." : taskName);
     
-    // Reset to 25m and start
     pauseTimer();
-    timerPausedTimeLeft = 25 * 60 * 1000;
+    timerTotalTime = 25 * 60 * 1000;
+    timerPausedTimeLeft = timerTotalTime;
+    customTimerName = "25 min (Task)";
+    document.getElementById('timer-name-label').innerText = customTimerName + ": " + (taskName.length > 20 ? taskName.substring(0,20)+"..." : taskName);
+    
     startTimer();
 };
 
-/** STOPWATCH LOGIC **/
-function updateStopwatchDisplay() {
-    let el = timerIsRunning ? 0 : 0; // dummy
-    let currentElapsed = stopIsRunning ? (Date.now() - stopStartTime + stopElapsed) : stopElapsed;
-    document.getElementById('stopwatch-display').innerText = formatTime(currentElapsed, true);
-}
-
-function startStopwatch() {
-    if(stopIsRunning) return;
-    stopStartTime = Date.now();
-    stopIsRunning = true;
-    localStorage.setItem('stop_running', 'true');
-    localStorage.setItem('stop_start_time', stopStartTime);
-    stopInterval = setInterval(updateStopwatchDisplay, 1000);
-    updateStopwatchDisplay();
-}
-
-function pauseStopwatch() {
-    if(!stopIsRunning) return;
-    clearInterval(stopInterval);
-    stopElapsed += (Date.now() - stopStartTime);
-    stopIsRunning = false;
-    localStorage.setItem('stop_running', 'false');
-    localStorage.setItem('stop_elapsed', stopElapsed);
-    updateStopwatchDisplay();
-}
-
-function resetStopwatch() {
-    pauseStopwatch();
-    stopElapsed = 0;
-    localStorage.setItem('stop_elapsed', '0');
-    updateStopwatchDisplay();
-}
-
-/** INIT FROM STORAGE **/
 window.addEventListener('DOMContentLoaded', () => {
     // Restore UI state
+    const w = document.getElementById('clock-widget');
     if(localStorage.getItem('clock_minimized') === 'false') {
-        document.getElementById('clock-widget').classList.remove('minimized');
-        document.getElementById('clock-toggle-btn').innerText = '▼';
+        w.classList.remove('minimized');
+        document.querySelector('#clock-toggle-btn i').className = 'bi bi-chevron-down';
     }
-    const savedTab = localStorage.getItem('clock_tab');
-    if(savedTab) switchClockTab(savedTab);
+    if(localStorage.getItem('clock_expanded') === 'true') {
+        w.classList.remove('minimized');
+        w.classList.add('expanded');
+        document.querySelector('#clock-expand-btn i').className = 'bi bi-arrows-angle-contract';
+    }
     
+    timerTotalTime = parseInt(localStorage.getItem('timer_total_time')) || (25 * 60 * 1000);
+    customTimerName = localStorage.getItem('timer_name') || "25 min (Pomodoro)";
+    document.getElementById('timer-name-label').innerText = customTimerName;
+
     // Timer state
     if(localStorage.getItem('timer_running') === 'true') {
         timerEndTime = parseInt(localStorage.getItem('timer_end_time')) || 0;
         if(timerEndTime > Date.now()) {
             timerIsRunning = true;
-            timerInterval = setInterval(updateTimerDisplay, 1000);
+            document.getElementById('timer-play-icon').innerHTML = '<i class="bi bi-pause-fill"></i>';
+            timerInterval = setInterval(updateTimerDisplay, 100);
         } else {
-            // Missed alarm
-            timerPausedTimeLeft = 25 * 60 * 1000;
+            timerPausedTimeLeft = timerTotalTime;
+            localStorage.setItem('timer_running', 'false');
         }
     } else {
-        timerPausedTimeLeft = parseInt(localStorage.getItem('timer_paused_left')) || (25 * 60 * 1000);
+        timerPausedTimeLeft = parseInt(localStorage.getItem('timer_paused_left')) || timerTotalTime;
     }
-    updateTimerDisplay();
-
-    // Stopwatch state
-    if(localStorage.getItem('stop_running') === 'true') {
-        stopStartTime = parseInt(localStorage.getItem('stop_start_time')) || Date.now();
-        stopElapsed = parseInt(localStorage.getItem('stop_elapsed')) || 0;
-        stopIsRunning = true;
-        stopInterval = setInterval(updateStopwatchDisplay, 1000);
-    } else {
-        stopElapsed = parseInt(localStorage.getItem('stop_elapsed')) || 0;
-    }
-    updateStopwatchDisplay();
+    
+    setTimeout(() => {
+        if(!w.classList.contains('minimized')) initProgressRing();
+        updateTimerDisplay();
+    }, 150);
 });
 </script>
