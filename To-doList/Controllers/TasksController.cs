@@ -270,9 +270,9 @@ namespace To_doList.Controllers
             return Json(new { success = true, taskId = task.TaskId, title = task.Title });
         }
 
-        // POST: Tasks/UpdateStatus
+        // POST: Tasks/UpdateStatusBatch
         [HttpPost]
-        public async Task<IActionResult> UpdateStatus([FromBody] UpdateStatusDto dto)
+        public async Task<IActionResult> UpdateStatusBatch([FromBody] UpdateStatusDto dto)
         {
             var userId = _userManager.GetUserId(User);
             var task = await _context.Tasks.FirstOrDefaultAsync(t => t.TaskId == dto.Id && t.UserId == userId);
@@ -374,24 +374,49 @@ namespace To_doList.Controllers
         // POST: Tasks/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("TaskId,UserId,Title,Description,Priority,DueDate,StartDate,IsCompleted,IsDeleted,CreatedAt")] TodoTask todoTask, int[] selectedTags, List<IFormFile> files)
+        public async Task<IActionResult> Edit(int id, [Bind("TaskId,Title,Description,Priority,DueDate,StartDate,IsCompleted,IsDeleted")] TodoTask todoTask, int[] selectedTags, List<IFormFile> files)
         {
             if (id != todoTask.TaskId)
             {
                 return NotFound();
             }
             
-            // Verify ownership or assignment
             var userId = _userManager.GetUserId(User);
+            var existingTask = await _context.Tasks
+                .FirstOrDefaultAsync(t => t.TaskId == id);
+
+            if (existingTask == null) return NotFound();
+
+            // Verify ownership or assignment
             var isAssigned = await _context.TaskAssignments.AnyAsync(a => a.TaskId == id && a.UserId == userId);
-            if(todoTask.UserId != userId && !isAssigned) return Forbid();
+            if(existingTask.UserId != userId && !isAssigned) return Forbid();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(todoTask);
-                    await _context.SaveChangesAsync();
+                    // Update allowed properties
+                    existingTask.Title = todoTask.Title;
+                    existingTask.Description = todoTask.Description;
+                    existingTask.Priority = todoTask.Priority;
+                    existingTask.DueDate = todoTask.DueDate;
+                    existingTask.StartDate = todoTask.StartDate;
+                    existingTask.IsCompleted = todoTask.IsCompleted;
+
+                    if (existingTask.IsCompleted && !existingTask.CompletedAt.HasValue)
+                    {
+                        existingTask.CompletedAt = DateTime.Now;
+                    }
+                    else if (!existingTask.IsCompleted)
+                    {
+                        existingTask.CompletedAt = null;
+                    }
+
+                    // Only owner can delete
+                    if (existingTask.UserId == userId)
+                    {
+                        existingTask.IsDeleted = todoTask.IsDeleted;
+                    }
 
                     // Update Tags
                     var existingTags = _context.TaskTags.Where(tt => tt.TaskId == id);
@@ -446,7 +471,7 @@ namespace To_doList.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!TodoTaskExists(todoTask.TaskId))
+                    if (!TodoTaskExists(existingTask.TaskId))
                     {
                         return NotFound();
                     }
@@ -458,7 +483,7 @@ namespace To_doList.Controllers
                 return RedirectToAction(nameof(Index));
             }
             ViewData["Tags"] = await _context.Tags.Where(t => t.UserId == userId).ToListAsync();
-            return View(todoTask);
+            return View(existingTask);
         }
 
 
@@ -524,7 +549,7 @@ namespace To_doList.Controllers
         }
 
         // POST: Tasks/UpdateStatus/5
-        [HttpPost]
+        [HttpPost("Tasks/UpdateStatus/{id}")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
         {
             var userId = _userManager.GetUserId(User);
